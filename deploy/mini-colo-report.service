@@ -1,0 +1,8 @@
+[Unit]
+Description=Write last month's mini-colo usage report
+
+[Service]
+Type=oneshot
+User=CHANGE_ME
+WorkingDirectory=/opt/mini-colo
+ExecStart=/opt/mini-colo/mini-colo report

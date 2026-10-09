@@ -1,0 +1,16 @@
+[Unit]
+Description=mini-colo telemetry collector and dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# The user whose ~/.ssh can reach the router.
+User=CHANGE_ME
+# Holds the binary, .env, the database and the reports directory.
+WorkingDirectory=/opt/mini-colo
+ExecStart=/opt/mini-colo/mini-colo serve
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
