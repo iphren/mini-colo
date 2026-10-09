@@ -1,0 +1,343 @@
+/* Shared by the dashboard and the monthly report. Colours are defined once
+   as roles; dark mode swaps the values, not the rules that use them. */
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11, 11, 11, 0.1);
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --warning: #fab219;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255, 255, 255, 0.1);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 24px 16px 48px;
+  background: var(--page);
+  color: var(--text-primary);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+main {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
+}
+
+a {
+  color: inherit;
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--text-secondary);
+}
+
+.status {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.status.stale::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--warning);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  min-width: 0;
+}
+
+/* Stat tiles */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.tile .label {
+  color: var(--text-secondary);
+}
+
+.tile .value {
+  margin: 2px 0;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.tile .note {
+  color: var(--text-secondary);
+  min-height: 1.45em;
+}
+
+/* Time-range filter */
+.filters {
+  display: flex;
+  gap: 4px;
+}
+
+.filters button {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.filters button:hover {
+  background: var(--border);
+}
+
+.filters button[aria-pressed="true"] {
+  background: var(--surface);
+  border-color: var(--axis);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Charts */
+.charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 16px;
+  transition: opacity 0.15s;
+}
+
+.charts.loading {
+  opacity: 0.5;
+}
+
+.charts .wide {
+  grid-column: 1 / -1;
+}
+
+.chart-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin-bottom: 8px;
+}
+
+.chart-legend {
+  display: flex;
+  gap: 16px;
+  color: var(--text-secondary);
+}
+
+.chart-legend span::before,
+.chart-tooltip .key {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 2px;
+  margin-right: 6px;
+  vertical-align: middle;
+  border-radius: 1px;
+  background: var(--key);
+}
+
+.chart-legend.swatches span::before {
+  height: 10px;
+  width: 10px;
+  border-radius: 2px;
+}
+
+.chart-plot {
+  position: relative;
+}
+
+.chart-plot svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+.chart-plot svg:focus-visible {
+  outline: 2px solid var(--series-1);
+  outline-offset: 2px;
+}
+
+.chart-plot text {
+  fill: var(--text-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-plot .grid {
+  stroke: var(--grid);
+  stroke-width: 1;
+}
+
+.chart-plot .axis,
+.chart-plot .crosshair {
+  stroke: var(--axis);
+  stroke-width: 1;
+}
+
+.chart-plot .line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart-plot .area {
+  opacity: 0.1;
+}
+
+.chart-plot .dot {
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.chart-plot .bars.hovering g:not(.active) {
+  opacity: 0.45;
+}
+
+.chart-plot .empty {
+  fill: var(--text-secondary);
+  font-size: 13px;
+}
+
+.chart-tooltip {
+  position: absolute;
+  top: 0;
+  z-index: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  color: var(--text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.chart-tooltip strong {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-tooltip .when {
+  margin-bottom: 2px;
+}
+
+.chart-table {
+  margin-top: 8px;
+  color: var(--text-secondary);
+}
+
+.chart-table summary {
+  cursor: pointer;
+  width: fit-content;
+}
+
+.chart-table .scroll {
+  max-height: 260px;
+  overflow: auto;
+  margin-top: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+th,
+td {
+  padding: 4px 12px 4px 0;
+  border-bottom: 1px solid var(--grid);
+  text-align: right;
+  white-space: nowrap;
+}
+
+th:first-child,
+td:first-child {
+  text-align: left;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+tfoot td {
+  border-bottom: 0;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+@media print {
+  body {
+    padding: 0;
+  }
+  .no-print {
+    display: none;
+  }
+  .card {
+    break-inside: avoid;
+  }
+}

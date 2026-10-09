@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>mini-colo</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1>mini-colo</h1>
+    <span>
+      <span id="status" class="status" role="status">Loading…</span>
+      · <a href="report">Monthly report</a>
+    </span>
+  </header>
+
+  <section class="tiles" aria-label="Current readings">
+    <div class="card tile">
+      <div class="label">Power now</div>
+      <div class="value" id="power">–</div>
+      <div class="note">5-minute average</div>
+    </div>
+    <div class="card tile">
+      <div class="label">Temperature</div>
+      <div class="value" id="temperature">–</div>
+      <div class="note"></div>
+    </div>
+    <div class="card tile">
+      <div class="label">Energy, <span class="month">this month</span></div>
+      <div class="value" id="energy">–</div>
+      <div class="note" id="cost"></div>
+    </div>
+    <div class="card tile">
+      <div class="label">Network, <span class="month">this month</span></div>
+      <div class="value" id="network">–</div>
+      <div class="note" id="network-split"></div>
+    </div>
+  </section>
+
+  <div class="filters" role="group" aria-label="Time range">
+    <button data-range="6h">6 hours</button>
+    <button data-range="24h">24 hours</button>
+    <button data-range="7d">7 days</button>
+    <button data-range="30d">30 days</button>
+  </div>
+
+  <section class="charts" id="charts">
+    <figure class="card wide" style="margin: 0">
+      <div class="chart-head">
+        <h2>Power <span class="muted" id="power-unit">· W</span></h2>
+      </div>
+      <div id="chart-power"></div>
+    </figure>
+    <figure class="card" style="margin: 0">
+      <div class="chart-head">
+        <h2>Temperature <span class="muted">· °C</span></h2>
+      </div>
+      <div id="chart-temperature"></div>
+    </figure>
+    <figure class="card" style="margin: 0">
+      <div class="chart-head">
+        <h2>Network rate <span class="muted" id="network-unit"></span></h2>
+        <div class="chart-legend">
+          <span style="--key: var(--series-1)">Received</span>
+          <span style="--key: var(--series-2)">Sent</span>
+        </div>
+      </div>
+      <div id="chart-network"></div>
+    </figure>
+  </section>
+</main>
+
+<script src="chart.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

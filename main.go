@@ -16,6 +16,7 @@ const usageText = `usage: mini-colo <command>
 
 commands:
   collect   take one sample and print it as JSON
+  serve     collect samples continuously and serve the dashboard
 `
 
 func main() {
@@ -47,6 +48,8 @@ func run(args []string) error {
 	switch args[0] {
 	case "collect":
 		return cmdCollect(ctx, cfg)
+	case "serve":
+		return cmdServe(ctx, cfg)
 	default:
 		fmt.Fprint(os.Stderr, usageText)
 		os.Exit(2)
