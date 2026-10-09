@@ -93,7 +93,7 @@ func loadConfig() (Config, error) {
 		cfg.PricePerKWh = price
 	}
 
-	interval, err := time.ParseDuration(envOr("COLLECT_INTERVAL", "1m"))
+	interval, err := time.ParseDuration(envOr("COLLECT_INTERVAL", "1h"))
 	if err != nil {
 		return cfg, fmt.Errorf("COLLECT_INTERVAL: %w", err)
 	}

@@ -127,6 +127,8 @@ type latestJSON struct {
 	Time         time.Time `json:"timestamp"`
 	TemperatureC float64   `json:"temperature_c"`
 	PowerW       *float64  `json:"power_w"`
+	// PowerSeconds is the length of the period PowerW is averaged over.
+	PowerSeconds float64 `json:"power_seconds"`
 }
 
 type totalsJSON struct {
@@ -146,8 +148,10 @@ type seriesJSON struct {
 	TxKiBPerSec  []*float64 `json:"tx_kib_s"`
 }
 
-// powerWindow is the period "power now" is averaged over. The energy
-// counter moves in small steps, so a single interval would be jumpy.
+// powerWindow is the shortest period "power now" is averaged over. The
+// energy counter moves in small steps, so a single short interval would be
+// jumpy. When samples are further apart than this, the average covers the
+// time since the previous sample instead.
 const powerWindow = 5 * time.Minute
 
 func (s *server) handleDashboard(w http.ResponseWriter, r *http.Request) {
@@ -181,6 +185,7 @@ func (s *server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 			Time:         latest.Time,
 			TemperatureC: latest.TemperatureC,
 			PowerW:       nullable(u.PowerW()),
+			PowerSeconds: u.Seconds,
 		}
 	}
 
@@ -195,14 +200,17 @@ func (s *server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 
 	// Round the end up to a bucket boundary so buckets keep the same
 	// edges from one refresh to the next.
-	to := now.Truncate(cr.bucket).Add(cr.bucket)
+	// A bucket narrower than the collection interval would mostly be empty
+	// and break the chart's line into dots, so widen it to match.
+	bucket := max(cr.bucket, s.cfg.Interval)
+	to := now.Truncate(bucket).Add(bucket)
 	from := to.Add(-cr.span)
 	samples, err := s.store.Range(ctx, from, to)
 	if err != nil {
 		s.fail(w, err)
 		return
 	}
-	for _, b := range bucketize(samples, from, to, every(cr.bucket)) {
+	for _, b := range bucketize(samples, from, to, every(bucket)) {
 		resp.Series.Time = append(resp.Series.Time, b.Start.UnixMilli())
 		resp.Series.PowerW = append(resp.Series.PowerW, nullable(b.PowerW()))
 		resp.Series.TemperatureC = append(resp.Series.TemperatureC, nullable(b.TempAvg()))

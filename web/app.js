@@ -26,6 +26,11 @@ async function refresh() {
   render(data);
 }
 
+// fmtSpan describes a duration as an adjective: "5-minute", "1-hour".
+function fmtSpan(seconds) {
+  return seconds < 3600 ? `${Math.round(seconds / 60)}-minute` : `${fmtNumber(seconds / 3600)}-hour`;
+}
+
 function setStatus(text, stale) {
   $("status").textContent = text;
   $("status").classList.toggle("stale", stale);
@@ -37,6 +42,7 @@ function render({ latest, month, series, stale_after }) {
     const stale = (Date.now() - at) / 1000 > stale_after;
     setStatus(`${stale ? "Collection stalled · last" : "Last"} sample ${at.toLocaleTimeString()}`, stale);
     $("power").textContent = latest.power_w == null ? "–" : `${fmtNumber(latest.power_w)} W`;
+    $("power-note").textContent = latest.power_w == null ? "" : `${fmtSpan(latest.power_seconds)} average`;
     $("temperature").textContent = `${fmtNumber(latest.temperature_c)} °C`;
   } else {
     setStatus("Waiting for the first sample", true);

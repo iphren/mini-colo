@@ -10,7 +10,7 @@ Copy `.env.example` to `.env` and fill it in, then:
 ```sh
 make build
 ./mini-colo collect            # take one sample and print it
-./mini-colo serve              # collect every minute, dashboard on :8080
+./mini-colo serve              # collect every hour, dashboard on :8080
 ./mini-colo report             # write reports/<last month>.html
 ./mini-colo report -month 2026-09 -out some/dir
 ```
