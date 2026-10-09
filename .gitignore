@@ -1,1 +1,7 @@
 .env
+/mini-colo
+/dist/
+*.db
+*.db-shm
+*.db-wal
+/reports/
