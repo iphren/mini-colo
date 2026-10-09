@@ -91,6 +91,7 @@ func (s *server) routes() http.Handler {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/dashboard", s.handleDashboard)
+	mux.HandleFunc("GET /report", s.handleReport)
 	mux.Handle("GET /", http.FileServerFS(static))
 	return mux
 }

@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>mini-colo · {{.Month.Format "January 2006"}}</title>
+  <style>{{.CSS}}</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Usage report · {{.Month.Format "January 2006"}}</h1>
+    <span class="muted">
+      {{- if or .Prev .Next}}
+      <span class="no-print">
+        {{if .Prev}}<a href="?month={{.Prev}}">← Previous</a> · {{end}}
+        {{if .Next}}<a href="?month={{.Next}}">Next →</a> · {{end}}
+        <a href="./">Dashboard</a> ·
+      </span>
+      {{- end}}
+      Generated {{.Generated.Format "2 Jan 2006 15:04"}}
+    </span>
+  </header>
+
+  {{if not .Total.Samples}}
+  <p class="card">No samples were recorded in {{.Month.Format "January 2006"}}.</p>
+  {{else}}
+
+  <section class="tiles" aria-label="Month totals">
+    <div class="card tile">
+      <div class="label">Energy</div>
+      <div class="value">{{energy .Total.EnergyWh}}</div>
+      <div class="note">{{if .PricePerKWh}}{{.Cost .Total.EnergyWh}} at {{.Currency}}{{.PricePerKWh}} per kWh{{end}}</div>
+    </div>
+    <div class="card tile">
+      <div class="label">Network received</div>
+      <div class="value">{{bytes .Total.RxKiB}}</div>
+      <div class="note"></div>
+    </div>
+    <div class="card tile">
+      <div class="label">Network sent</div>
+      <div class="value">{{bytes .Total.TxKiB}}</div>
+      <div class="note"></div>
+    </div>
+    <div class="card tile">
+      <div class="label">Average temperature</div>
+      <div class="value">{{temp .Total.TempAvg}}</div>
+      <div class="note">{{temp .Total.TempMin}} to {{temp .Total.TempMax}}</div>
+    </div>
+  </section>
+
+  <p class="muted" style="margin: 0">
+    Samples cover {{.CoveragePercent}} of the period.
+    {{- if lt .Coverage 0.99}} Usage during the gaps was still counted, on the day collection resumed.{{end}}
+  </p>
+
+  <section class="charts">
+    <figure class="card wide" style="margin: 0">
+      <div class="chart-head">
+        <h2>Energy per day <span class="muted" id="energy-unit"></span></h2>
+      </div>
+      <div id="chart-energy"></div>
+    </figure>
+    <figure class="card wide" style="margin: 0">
+      <div class="chart-head">
+        <h2>Network per day <span class="muted" id="network-unit"></span></h2>
+        <div class="chart-legend swatches">
+          <span style="--key: var(--series-1)">Received</span>
+          <span style="--key: var(--series-2)">Sent</span>
+        </div>
+      </div>
+      <div id="chart-network"></div>
+    </figure>
+  </section>
+
+  <section class="card">
+    <h2 style="margin-bottom: 8px">Daily breakdown</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Day</th>
+          <th>Energy</th>
+          {{if .PricePerKWh}}<th>Cost</th>{{end}}
+          <th>Received</th>
+          <th>Sent</th>
+          <th>Temp. min</th>
+          <th>Temp. avg</th>
+          <th>Temp. max</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{- range .Days}}
+        <tr>
+          <td>{{.Start.Format "Mon 2 Jan"}}</td>
+          {{- if .Samples}}
+          <td>{{energy .EnergyWh}}</td>
+          {{if $.PricePerKWh}}<td>{{$.Cost .EnergyWh}}</td>{{end}}
+          <td>{{bytes .RxKiB}}</td>
+          <td>{{bytes .TxKiB}}</td>
+          <td>{{temp .TempMin}}</td>
+          <td>{{temp .TempAvg}}</td>
+          <td>{{temp .TempMax}}</td>
+          {{- else}}
+          <td>–</td>{{if $.PricePerKWh}}<td>–</td>{{end}}<td>–</td><td>–</td><td>–</td><td>–</td><td>–</td>
+          {{- end}}
+        </tr>
+        {{- end}}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td>Total</td>
+          <td>{{energy .Total.EnergyWh}}</td>
+          {{if .PricePerKWh}}<td>{{.Cost .Total.EnergyWh}}</td>{{end}}
+          <td>{{bytes .Total.RxKiB}}</td>
+          <td>{{bytes .Total.TxKiB}}</td>
+          <td>{{temp .Total.TempMin}}</td>
+          <td>{{temp .Total.TempAvg}}</td>
+          <td>{{temp .Total.TempMax}}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+
+  <script>{{.ChartJS}}</script>
+  <script>
+    "use strict";
+    // The template engine writes the Go slice here as a JSON array.
+    const days = {{.ChartDays}};
+    const x = days.map((d) => d.t);
+    const column = (key, div) => days.map((d) => (d[key] == null ? null : d[key] / div));
+
+    const useKWh = Math.max(...days.map((d) => d.energy_wh || 0)) >= 1000;
+    const energyUnit = useKWh ? "kWh" : "Wh";
+    document.getElementById("energy-unit").textContent = `· ${energyUnit}`;
+    renderChart(document.getElementById("chart-energy"), {
+      type: "bar",
+      daily: true,
+      table: false, // the daily breakdown below already is the table
+      label: "Energy used per day",
+      x,
+      series: [{ name: "Energy", color: "var(--series-1)", values: column("energy_wh", useKWh ? 1000 : 1) }],
+      format: (v) => `${fmtNumber(v, 2)} ${energyUnit}`,
+    });
+
+    const { div, unit } = byteScale(Math.max(...days.map((d) => (d.rx_kib || 0) + (d.tx_kib || 0))));
+    document.getElementById("network-unit").textContent = `· ${unit}`;
+    renderChart(document.getElementById("chart-network"), {
+      type: "bar",
+      daily: true,
+      table: false,
+      label: "Network traffic received and sent per day",
+      x,
+      series: [
+        { name: "Received", color: "var(--series-1)", values: column("rx_kib", div) },
+        { name: "Sent", color: "var(--series-2)", values: column("tx_kib", div) },
+      ],
+      format: (v) => `${fmtNumber(v, 2)} ${unit}`,
+    });
+  </script>
+  {{end}}
+</main>
+</body>
+</html>
