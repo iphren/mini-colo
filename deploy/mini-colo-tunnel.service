@@ -1,0 +1,20 @@
+[Unit]
+Description=mini-colo reverse tunnel to the public web server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# The user whose ~/.ssh holds the tunnel key.
+User=CHANGE_ME
+# Makes the dashboard on this box's port 8080 reachable as port 18080 on the
+# web server's loopback, where its reverse proxy can pick it up. Set the key
+# path and the SSH destination.
+ExecStart=/usr/bin/ssh -NT -i /home/CHANGE_ME/.ssh/mini-colo-tunnel \
+    -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
+    -o ExitOnForwardFailure=yes \
+    -R 127.0.0.1:18080:127.0.0.1:8080 tunnel@CHANGE_ME
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
