@@ -5,10 +5,13 @@ import (
 	"embed"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"html/template"
 	"io/fs"
 	"log/slog"
 	"math"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 )
@@ -19,6 +22,10 @@ import (
 //go:embed web
 var webFS embed.FS
 
+// indexTemplate is the dashboard page. It is a template rather than a plain
+// static file only so the title and favicon can come from the configuration.
+var indexTemplate = template.Must(template.ParseFS(webFS, "web/index.html"))
+
 type server struct {
 	cfg   Config
 	store *Store
@@ -26,6 +33,13 @@ type server struct {
 
 // cmdServe runs the collector and the dashboard until ctx is cancelled.
 func cmdServe(ctx context.Context, cfg Config) error {
+	// Catch a mistyped favicon path now rather than as a broken icon later.
+	if cfg.FaviconPath != "" {
+		if _, err := os.Stat(cfg.FaviconPath); err != nil {
+			return fmt.Errorf("DASHBOARD_FAVICON: %w", err)
+		}
+	}
+
 	store, err := openStore(ctx, cfg.DBPath)
 	if err != nil {
 		return err
@@ -92,8 +106,32 @@ func (s *server) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/dashboard", s.handleDashboard)
 	mux.HandleFunc("GET /report", s.handleReport)
+	// {$} matches the root path only; everything else under / is a static file.
+	mux.HandleFunc("GET /{$}", s.handleIndex)
+	if s.cfg.FaviconPath != "" {
+		mux.HandleFunc("GET /favicon", s.handleFavicon)
+	}
 	mux.Handle("GET /", http.FileServerFS(static))
 	return mux
+}
+
+func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
+	page := struct {
+		Title   string
+		Favicon bool
+	}{s.cfg.Title, s.cfg.FaviconPath != ""}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := indexTemplate.Execute(w, page); err != nil {
+		slog.Error("rendering dashboard", "err", err)
+	}
+}
+
+// handleFavicon serves the configured icon. The pages link to it by a
+// relative URL, so it also works when a proxy serves them under a sub-path,
+// where the browser's default /favicon.ico would miss.
+func (s *server) handleFavicon(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, s.cfg.FaviconPath)
 }
 
 // chartRange is one choice in the dashboard's time-range filter: how far

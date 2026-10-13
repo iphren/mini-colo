@@ -31,6 +31,7 @@ var reportTemplate = template.Must(template.New("report").Funcs(template.FuncMap
 
 // report is everything the template needs to render one month.
 type report struct {
+	Title     string
 	Month     time.Time
 	Generated time.Time
 	Total     Usage
@@ -46,6 +47,9 @@ type report struct {
 	// or empty for no link. They are left empty in reports written to a
 	// file, where there is nothing to link to.
 	Prev, Next string
+	// Favicon says whether to link to the dashboard's icon. Like the links
+	// above, it only makes sense in a report the dashboard serves.
+	Favicon bool
 
 	// The stylesheet and chart code are inlined so a saved report is a
 	// single self-contained file. Their types tell html/template that
@@ -108,6 +112,7 @@ func buildReport(ctx context.Context, store *Store, cfg Config, month time.Time)
 	}
 
 	r := report{
+		Title:       cfg.Title,
 		Month:       start,
 		Generated:   time.Now(),
 		Total:       totalUsage(samples, start, end),
@@ -195,6 +200,8 @@ func (s *server) handleReport(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+
+	rep.Favicon = s.cfg.FaviconPath != ""
 
 	// Link back as far as there is data, and forward up to this month.
 	earliest, ok, err := s.store.Earliest(r.Context())

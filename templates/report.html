@@ -3,7 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>mini-colo · {{.Month.Format "January 2006"}}</title>
+  <title>{{.Title}} · {{.Month.Format "January 2006"}}</title>
+  {{- if .Favicon}}
+  <link rel="icon" href="favicon">
+  {{- end}}
   <style>{{.CSS}}</style>
 </head>
 <body>

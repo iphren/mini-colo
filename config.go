@@ -22,6 +22,12 @@ type Config struct {
 	PricePerKWh float64
 	Currency    string
 
+	// Title is the name shown on the dashboard and reports. FaviconPath is
+	// an image file to serve as their icon, or empty for none. Both live
+	// outside the repository so a deployment can brand itself.
+	Title       string
+	FaviconPath string
+
 	ListenAddr string
 	DBPath     string
 	Interval   time.Duration
@@ -66,6 +72,8 @@ func loadConfig() (Config, error) {
 		RouterHost:       os.Getenv("ROUTER_HOST"),
 		NetworkInterface: os.Getenv("NETWORK_INTERFACE"),
 		Currency:         os.Getenv("ENERGY_CURRENCY"),
+		Title:            envOr("DASHBOARD_TITLE", "mini-colo"),
+		FaviconPath:      os.Getenv("DASHBOARD_FAVICON"),
 		ListenAddr:       envOr("LISTEN_ADDR", ":8080"),
 		DBPath:           envOr("DB_PATH", "mini-colo.db"),
 	}

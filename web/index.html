@@ -3,13 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>mini-colo</title>
+  <title>{{.Title}}</title>
+  {{- if .Favicon}}
+  <link rel="icon" href="favicon">
+  {{- end}}
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <main>
   <header>
-    <h1>mini-colo</h1>
+    <h1>{{.Title}}</h1>
     <span>
       <span id="status" class="status" role="status">Loading…</span>
       · <a href="report">Monthly report</a>
