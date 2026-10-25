@@ -28,6 +28,11 @@ type Config struct {
 	Title       string
 	FaviconPath string
 
+	// ReportStartDay is the day of the month, 1 to 31, that each monthly
+	// report starts on, for example to match a billing cycle. In months
+	// shorter than that, the period starts on the last day.
+	ReportStartDay int
+
 	ListenAddr string
 	DBPath     string
 	Interval   time.Duration
@@ -100,6 +105,15 @@ func loadConfig() (Config, error) {
 		}
 		cfg.PricePerKWh = price
 	}
+
+	startDay, err := strconv.Atoi(envOr("REPORT_START_DAY", "1"))
+	if err != nil {
+		return cfg, fmt.Errorf("REPORT_START_DAY: %w", err)
+	}
+	if startDay < 1 || startDay > 31 {
+		return cfg, errors.New("REPORT_START_DAY must be between 1 and 31")
+	}
+	cfg.ReportStartDay = startDay
 
 	interval, err := time.ParseDuration(envOr("COLLECT_INTERVAL", "1h"))
 	if err != nil {

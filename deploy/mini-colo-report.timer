@@ -1,7 +1,10 @@
 [Unit]
-Description=Write the mini-colo usage report on the 1st of each month
+Description=Write the mini-colo usage report once each month
 
 [Timer]
+# Run on REPORT_START_DAY from .env (the 1st by default), e.g. *-*-15 for
+# the 15th. For a day after the 28th, use *-*~01 (the last day of each
+# month), so months too short for that day still get their report.
 OnCalendar=*-*-01 00:10:00
 # If the box was off at that time, run once it is back.
 Persistent=true

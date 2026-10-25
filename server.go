@@ -227,14 +227,14 @@ func (s *server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
-	monthEnd := monthStart.AddDate(0, 1, 0)
+	month := currentPeriod(now, s.cfg.ReportStartDay)
+	monthStart, monthEnd := periodBounds(month, s.cfg.ReportStartDay)
 	monthSamples, err := s.store.Range(ctx, monthStart, monthEnd)
 	if err != nil {
 		s.fail(w, err)
 		return
 	}
-	resp.Month = s.totals(monthStart.Format("January 2006"), totalUsage(monthSamples, monthStart, monthEnd))
+	resp.Month = s.totals(report{Month: month, Start: monthStart, End: monthEnd}.Period(), totalUsage(monthSamples, monthStart, monthEnd))
 
 	// Round the end up to a bucket boundary so buckets keep the same
 	// edges from one refresh to the next.

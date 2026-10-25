@@ -17,6 +17,11 @@ make build
 
 The dashboard also serves reports at `/report?month=2026-09`.
 
+Reports cover calendar months by default. To match a billing cycle instead,
+set `REPORT_START_DAY` in `.env`: with `15`, `-month 2026-09` covers
+15 September to 14 October. Change the day in `deploy/mini-colo-report.timer`
+to match.
+
 ## Deploying
 
 ```sh

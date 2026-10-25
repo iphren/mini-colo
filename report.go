@@ -31,11 +31,15 @@ var reportTemplate = template.Must(template.New("report").Funcs(template.FuncMap
 
 // report is everything the template needs to render one month.
 type report struct {
-	Title     string
-	Month     time.Time
-	Generated time.Time
-	Total     Usage
-	Days      []Usage
+	Title string
+	// Month names the period, as the first of the month it starts in.
+	// Start and End bound it; they differ from Month and the first of the
+	// next month only when reports start on a day other than the 1st.
+	Month      time.Time
+	Start, End time.Time
+	Generated  time.Time
+	Total      Usage
+	Days       []Usage
 	// Coverage is the share of the month (so far) that the samples cover,
 	// from 0 to 1. Anything under 1 means usage went unrecorded.
 	Coverage float64
@@ -56,6 +60,19 @@ type report struct {
 	// they are trusted and must not be escaped.
 	CSS     template.CSS
 	ChartJS template.JS
+}
+
+// Period describes the span the report covers: just the month when it
+// starts on the 1st, otherwise the first and last days.
+func (r report) Period() string {
+	if r.Start.Day() == 1 && r.End.Day() == 1 {
+		return r.Month.Format("January 2006")
+	}
+	last := r.End.AddDate(0, 0, -1)
+	if r.Start.Year() != last.Year() {
+		return r.Start.Format("2 Jan 2006") + " – " + last.Format("2 Jan 2006")
+	}
+	return r.Start.Format("2 Jan") + " – " + last.Format("2 Jan 2006")
 }
 
 // CoveragePercent is Coverage formatted for display.
@@ -92,11 +109,36 @@ func (r report) ChartDays() []reportDay {
 	return days
 }
 
-// buildReport computes the report for the calendar month containing month,
-// in month's time zone.
+// periodBounds returns the reporting period that starts in month: from
+// startDay of that month up to startDay of the next, in month's time zone.
+// A startDay past the end of a short month falls on its last day.
+func periodBounds(month time.Time, startDay int) (start, end time.Time) {
+	first := time.Date(month.Year(), month.Month(), 1, 0, 0, 0, 0, month.Location())
+	return dayOfMonth(first, startDay), dayOfMonth(first.AddDate(0, 1, 0), startDay)
+}
+
+// dayOfMonth is the given day of first's month, capped at the month's last
+// day. time.Date would roll 31 February over into March instead.
+func dayOfMonth(first time.Time, day int) time.Time {
+	last := first.AddDate(0, 1, -1).Day()
+	return time.Date(first.Year(), first.Month(), min(day, last), 0, 0, 0, 0, first.Location())
+}
+
+// currentPeriod returns the first of the month that the reporting period
+// containing t starts in.
+func currentPeriod(t time.Time, startDay int) time.Time {
+	month := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, t.Location())
+	if start, _ := periodBounds(month, startDay); t.Before(start) {
+		month = month.AddDate(0, -1, 0)
+	}
+	return month
+}
+
+// buildReport computes the report for the period starting in month (see
+// periodBounds), in month's time zone.
 func buildReport(ctx context.Context, store *Store, cfg Config, month time.Time) (report, error) {
-	start := time.Date(month.Year(), month.Month(), 1, 0, 0, 0, 0, month.Location())
-	end := start.AddDate(0, 1, 0)
+	month = time.Date(month.Year(), month.Month(), 1, 0, 0, 0, 0, month.Location())
+	start, end := periodBounds(month, cfg.ReportStartDay)
 
 	samples, err := store.Range(ctx, start, end)
 	if err != nil {
@@ -113,7 +155,9 @@ func buildReport(ctx context.Context, store *Store, cfg Config, month time.Time)
 
 	r := report{
 		Title:       cfg.Title,
-		Month:       start,
+		Month:       month,
+		Start:       start,
+		End:         end,
 		Generated:   time.Now(),
 		Total:       totalUsage(samples, start, end),
 		Days:        bucketize(samples, start, end, nextDay),
@@ -134,11 +178,12 @@ func buildReport(ctx context.Context, store *Store, cfg Config, month time.Time)
 	return r, nil
 }
 
-// cmdReport writes one month's report to a file. It defaults to last month,
-// which is what a timer firing on the 1st wants.
+// cmdReport writes one month's report to a file. It defaults to the last
+// complete period, which is what a timer firing on REPORT_START_DAY wants.
 func cmdReport(ctx context.Context, cfg Config, args []string) error {
 	flags := flag.NewFlagSet("report", flag.ExitOnError)
-	monthFlag := flags.String("month", time.Now().AddDate(0, -1, 0).Format(monthLayout), "month to report on, as YYYY-MM")
+	lastPeriod := currentPeriod(time.Now(), cfg.ReportStartDay).AddDate(0, -1, 0)
+	monthFlag := flags.String("month", lastPeriod.Format(monthLayout), "month the period to report on starts in, as YYYY-MM")
 	outDir := flags.String("out", "reports", "directory to write the report into")
 	flags.Parse(args)
 
@@ -180,10 +225,9 @@ func cmdReport(ctx context.Context, cfg Config, args []string) error {
 }
 
 // handleReport serves the report for ?month=YYYY-MM, defaulting to the
-// current month.
+// current period.
 func (s *server) handleReport(w http.ResponseWriter, r *http.Request) {
-	now := time.Now()
-	thisMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	thisMonth := currentPeriod(time.Now(), s.cfg.ReportStartDay)
 
 	month := thisMonth
 	if q := r.URL.Query().Get("month"); q != "" {
@@ -203,13 +247,13 @@ func (s *server) handleReport(w http.ResponseWriter, r *http.Request) {
 
 	rep.Favicon = s.cfg.FaviconPath != ""
 
-	// Link back as far as there is data, and forward up to this month.
+	// Link back as far as there is data, and forward up to this period.
 	earliest, ok, err := s.store.Earliest(r.Context())
 	if err != nil {
 		s.fail(w, err)
 		return
 	}
-	if ok && earliest.Time.Before(rep.Month) {
+	if ok && earliest.Time.Before(rep.Start) {
 		rep.Prev = rep.Month.AddDate(0, -1, 0).Format(monthLayout)
 	}
 	if rep.Month.Before(thisMonth) {
